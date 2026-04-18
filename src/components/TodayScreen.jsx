@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCaminho } from '../hooks/useCaminho';
 import DayPillNav from './DayPillNav';
+import AlbergueModal from './AlbergueModal';
 
 const WEATHER_OPTIONS = [
   { id: 'great', icon: '☀', label: 'dia bom' },
@@ -11,22 +12,18 @@ const WEATHER_OPTIONS = [
 ];
 
 function findTodayStage(stages) {
-  // First priority: a stage in progress (started, not arrived)
   const inProgress = stages.find(s => s.startedAt && !s.arrivedAt);
   if (inProgress) return inProgress;
 
-  // Second priority: a stage arrived today — closure moment
   const today = new Date().toISOString().slice(0, 10);
   const arrivedToday = stages.find(s =>
     s.arrivedAt && s.arrivedAt.slice(0, 10) === today
   );
   if (arrivedToday) return arrivedToday;
 
-  // Third priority: the first stage not yet started
   const notStarted = stages.find(s => !s.startedAt);
   if (notStarted) return notStarted;
 
-  // All done — show the last stage
   return stages[stages.length - 1];
 }
 
@@ -39,6 +36,7 @@ function getStageState(stage) {
 export default function TodayScreen() {
   const { data, loading, update } = useCaminho();
   const [viewedStageId, setViewedStageId] = useState(null);
+  const [showAlbergueInfo, setShowAlbergueInfo] = useState(false);
 
   if (loading || !data) {
     return <div style={{ padding: 24, color: '#888780' }}>A carregar...</div>;
@@ -153,9 +151,46 @@ export default function TodayScreen() {
         <p style={{ fontSize: 11, color: '#888780', letterSpacing: 0.5, margin: '0 0 6px' }}>
           DORMIR
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#1D9E75' }}></div>
-          <p style={{ fontSize: 14, margin: 0, color: '#2C2C2A' }}>{stage.albergue}</p>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 20,
+        }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#1D9E75', flexShrink: 0 }}></div>
+          <p style={{
+            fontSize: 14,
+            margin: 0,
+            color: '#2C2C2A',
+            flex: 1,
+          }}>
+            {stage.albergue}
+          </p>
+          {stage.albergueInfo && (
+            <button
+              onClick={() => setShowAlbergueInfo(true)}
+              aria-label="Informações sobre o albergue"
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                border: '0.5px solid #D3D1C7',
+                background: 'white',
+                color: '#5F5E5A',
+                fontSize: 12,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                padding: 0,
+                lineHeight: 1,
+                fontFamily: 'Georgia, serif',
+              }}
+            >
+              i
+            </button>
+          )}
         </div>
 
         {state === 'arrived' ? (
@@ -274,6 +309,13 @@ export default function TodayScreen() {
           </button>
         )}
       </div>
+
+      {showAlbergueInfo && stage.albergueInfo && (
+        <AlbergueModal
+          info={stage.albergueInfo}
+          onClose={() => setShowAlbergueInfo(false)}
+        />
+      )}
     </div>
   );
 }
