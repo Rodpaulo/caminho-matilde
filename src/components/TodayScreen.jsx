@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useCaminho } from '../hooks/useCaminho';
+import DayPillNav from './DayPillNav';
 
-// Weather status options for the pilgrim to set
 const WEATHER_OPTIONS = [
   { id: 'great', icon: '☀', label: 'dia bom' },
   { id: 'tired-good', icon: '⛅', label: 'cansada mas bem' },
@@ -9,16 +10,23 @@ const WEATHER_OPTIONS = [
   { id: 'sleeping', icon: '🌙', label: 'a dormir' },
 ];
 
-function findCurrentStage(stages) {
+function findTodayStage(stages) {
   // First priority: a stage in progress (started, not arrived)
   const inProgress = stages.find(s => s.startedAt && !s.arrivedAt);
   if (inProgress) return inProgress;
 
-  // Second priority: the first stage not yet started
+  // Second priority: a stage arrived today — closure moment
+  const today = new Date().toISOString().slice(0, 10);
+  const arrivedToday = stages.find(s =>
+    s.arrivedAt && s.arrivedAt.slice(0, 10) === today
+  );
+  if (arrivedToday) return arrivedToday;
+
+  // Third priority: the first stage not yet started
   const notStarted = stages.find(s => !s.startedAt);
   if (notStarted) return notStarted;
 
-  // Fallback: all done — show the last stage
+  // All done — show the last stage
   return stages[stages.length - 1];
 }
 
@@ -29,23 +37,51 @@ function getStageState(stage) {
 }
 
 export default function TodayScreen() {
-  const { data, loading } = useCaminho();
+  const { data, loading, update } = useCaminho();
+  const [viewedStageId, setViewedStageId] = useState(null);
 
   if (loading || !data) {
     return <div style={{ padding: 24, color: '#888780' }}>A carregar...</div>;
   }
 
-  const stage = findCurrentStage(data.stages);
+  const todayStage = findTodayStage(data.stages);
+  const stage = data.stages.find(s => s.id === viewedStageId) ?? todayStage;
   const state = getStageState(stage);
   const totalStages = data.stages.length;
+  const isViewingToday = stage.id === todayStage.id;
+
+  function handleMainAction() {
+    const now = new Date().toISOString();
+
+    if (state === 'not-started') {
+      update(current => ({
+        ...current,
+        stages: current.stages.map(s =>
+          s.id === stage.id ? { ...s, startedAt: now } : s
+        ),
+      }));
+    } else if (state === 'walking') {
+      update(current => ({
+        ...current,
+        stages: current.stages.map(s =>
+          s.id === stage.id ? { ...s, arrivedAt: now } : s
+        ),
+      }));
+    }
+  }
+
+  function handleWeatherChange(weatherId) {
+    update(current => ({
+      ...current,
+      stages: current.stages.map(s =>
+        s.id === stage.id ? { ...s, weatherStatus: weatherId } : s
+      ),
+    }));
+  }
 
   const buttonLabel = state === 'not-started'
     ? 'Comecei a caminhar'
-    : state === 'walking'
-    ? 'Cheguei'
-    : 'A descansar';
-
-  const buttonDisabled = state === 'arrived';
+    : 'Cheguei';
 
   return (
     <div style={{ padding: '24px 20px', maxWidth: 420, margin: '0 auto' }}>
@@ -57,8 +93,15 @@ export default function TodayScreen() {
         margin: '0 0 14px',
         textTransform: 'uppercase',
       }}>
-        HOJE
+        {isViewingToday ? 'HOJE' : 'O CAMINHO'}
       </p>
+
+      <DayPillNav
+        stages={data.stages}
+        currentStageId={stage.id}
+        todayStageId={todayStage.id}
+        onSelect={setViewedStageId}
+      />
 
       <div style={{
         background: 'white',
@@ -66,7 +109,6 @@ export default function TodayScreen() {
         borderRadius: 28,
         padding: '22px 20px',
       }}>
-        {/* Day counter + weather */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -83,7 +125,6 @@ export default function TodayScreen() {
           </span>
         </div>
 
-        {/* From → To */}
         <h2 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 2px', color: '#2C2C2A' }}>
           {stage.from}
         </h2>
@@ -91,7 +132,6 @@ export default function TodayScreen() {
           → {stage.to}
         </p>
 
-        {/* Distance & time stats */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
           <div style={{ flex: 1, background: '#F1EFE8', borderRadius: 8, padding: 10, textAlign: 'center' }}>
             <p style={{ fontSize: 11, color: '#5F5E5A', margin: '0 0 2px' }}>distância</p>
@@ -103,7 +143,6 @@ export default function TodayScreen() {
           </div>
         </div>
 
-        {/* Note */}
         <p style={{ fontSize: 11, color: '#888780', letterSpacing: 0.5, margin: '0 0 6px' }}>
           NOTA DO DIA
         </p>
@@ -111,7 +150,6 @@ export default function TodayScreen() {
           {stage.note}
         </p>
 
-        {/* Albergue */}
         <p style={{ fontSize: 11, color: '#888780', letterSpacing: 0.5, margin: '0 0 6px' }}>
           DORMIR
         </p>
@@ -120,29 +158,120 @@ export default function TodayScreen() {
           <p style={{ fontSize: 14, margin: 0, color: '#2C2C2A' }}>{stage.albergue}</p>
         </div>
 
-        {/* Main action button */}
-        <button
-          disabled={buttonDisabled}
-          style={{
-            width: '100%',
-            background: buttonDisabled ? '#D3D1C7' : '#0F6E56',
-            color: 'white',
-            border: 'none',
-            borderRadius: 999,
-            padding: 14,
-            fontSize: 15,
-            fontWeight: 500,
-            cursor: buttonDisabled ? 'default' : 'pointer',
-          }}
-        >
-          {buttonLabel}
-        </button>
+        {state === 'arrived' ? (
+          <div style={{
+            background: '#E1F5EE',
+            border: '1px solid #0F6E56',
+            borderRadius: 16,
+            padding: '14px',
+            textAlign: 'center',
+          }}>
+            <p style={{ fontSize: 14, color: '#04342C', fontWeight: 500, margin: '0 0 4px' }}>
+              Chegaste a {stage.to}
+            </p>
+            <p style={{ fontSize: 11, color: '#0F6E56', margin: 0 }}>
+              {new Date(stage.arrivedAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} · descansa bem
+            </p>
+          </div>
+        ) : (
+          <button
+            onClick={handleMainAction}
+            style={{
+              width: '100%',
+              background: '#0F6E56',
+              color: 'white',
+              border: 'none',
+              borderRadius: 999,
+              padding: 14,
+              fontSize: 15,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            {buttonLabel}
+          </button>
+        )}
 
-        {/* Timestamp */}
-        {stage.startedAt && (
+        {state === 'walking' && stage.startedAt && (
           <p style={{ fontSize: 11, color: '#888780', margin: '8px 0 0', textAlign: 'center' }}>
             Começou às {new Date(stage.startedAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
           </p>
+        )}
+
+        {(state === 'walking' || state === 'arrived') && (
+          <div style={{
+            marginTop: 18,
+            paddingTop: 18,
+            borderTop: '0.5px solid #D3D1C7',
+          }}>
+            <p style={{
+              fontSize: 11,
+              color: '#888780',
+              letterSpacing: 0.5,
+              margin: '0 0 10px',
+              textAlign: 'center',
+            }}>
+              COMO ESTÁS?
+            </p>
+            <div style={{
+              display: 'flex',
+              gap: 6,
+              justifyContent: 'space-between',
+            }}>
+              {WEATHER_OPTIONS.map(option => {
+                const isSelected = stage.weatherStatus === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    onClick={() => handleWeatherChange(option.id)}
+                    title={option.label}
+                    style={{
+                      flex: 1,
+                      background: isSelected ? '#E1F5EE' : 'transparent',
+                      border: isSelected ? '1px solid #0F6E56' : '0.5px solid #D3D1C7',
+                      borderRadius: 10,
+                      padding: '10px 4px',
+                      fontSize: 20,
+                      cursor: 'pointer',
+                      transition: 'background 0.15s, border 0.15s',
+                    }}
+                  >
+                    {option.icon}
+                  </button>
+                );
+              })}
+            </div>
+            {stage.weatherStatus && (
+              <p style={{
+                fontSize: 11,
+                color: '#5F5E5A',
+                fontStyle: 'italic',
+                textAlign: 'center',
+                margin: '10px 0 0',
+              }}>
+                {WEATHER_OPTIONS.find(o => o.id === stage.weatherStatus)?.label}
+              </p>
+            )}
+          </div>
+        )}
+
+        {!isViewingToday && (
+          <button
+            onClick={() => setViewedStageId(null)}
+            style={{
+              width: '100%',
+              background: 'transparent',
+              border: '0.5px solid #D3D1C7',
+              borderRadius: 999,
+              padding: 10,
+              fontSize: 12,
+              color: '#5F5E5A',
+              cursor: 'pointer',
+              marginTop: 14,
+            }}
+          >
+            ← voltar a hoje
+          </button>
         )}
       </div>
     </div>
