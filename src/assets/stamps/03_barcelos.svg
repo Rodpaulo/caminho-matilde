@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="92" fill="none" stroke="#0F6E56" stroke-width="2"/>
+  <circle cx="100" cy="100" r="86" fill="none" stroke="#0F6E56" stroke-width="0.8"/>
+  <path d="M 80 130 Q 75 115 85 105 Q 95 95 115 95 Q 130 95 135 110 Q 135 125 125 135 Q 110 140 95 138 Q 85 137 80 130 Z" fill="none" stroke="#0F6E56" stroke-width="1.8"/>
+  <path d="M 130 108 Q 150 95 155 75 M 132 112 Q 155 105 165 90 M 130 120 Q 155 120 160 108" stroke="#0F6E56" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <circle cx="80" cy="95" r="10" fill="none" stroke="#0F6E56" stroke-width="1.5"/>
+  <path d="M 74 87 Q 73 82 76 81 Q 78 85 80 82 Q 82 85 84 82 Q 86 85 88 82" stroke="#0F6E56" stroke-width="1.5" fill="none"/>
+  <path d="M 72 96 L 66 96 L 72 99 Z" fill="#0F6E56"/>
+  <circle cx="78" cy="94" r="1.2" fill="#0F6E56"/>
+  <path d="M 75 102 Q 72 106 75 108" stroke="#0F6E56" stroke-width="1.2" fill="none"/>
+  <path d="M 100 115 Q 95 110 95 114 Q 95 118 100 121 Q 105 118 105 114 Q 105 110 100 115 Z" fill="#0F6E56"/>
+  <line x1="95" y1="140" x2="93" y2="150" stroke="#0F6E56" stroke-width="1.5"/>
+  <line x1="110" y1="140" x2="112" y2="150" stroke="#0F6E56" stroke-width="1.5"/>
+  <path d="M 88 150 L 93 150 L 97 152 M 107 152 L 112 150 L 117 150" stroke="#0F6E56" stroke-width="1.2" fill="none"/>
+  <defs>
+    <path id="bar-top" d="M 30 100 A 70 70 0 0 1 170 100" fill="none"/>
+    <path id="bar-bot" d="M 30 105 A 72 72 0 0 0 170 105" fill="none"/>
+  </defs>
+  <text font-family="sans-serif" font-size="12" font-weight="500" fill="#0F6E56" letter-spacing="2">
+    <textPath href="#bar-top" startOffset="50%" text-anchor="middle">BARCELOS</textPath>
+  </text>
+  <text font-family="sans-serif" font-size="7" fill="#0F6E56" letter-spacing="1.5">
+    <textPath href="#bar-bot" startOffset="50%" text-anchor="middle">O GALO</textPath>
+  </text>
+</svg>

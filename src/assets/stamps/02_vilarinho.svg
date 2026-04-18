@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="92" fill="none" stroke="#0F6E56" stroke-width="2"/>
+  <circle cx="100" cy="100" r="86" fill="none" stroke="#0F6E56" stroke-width="0.8"/>
+  <path d="M 50 150 Q 100 120 150 150" stroke="#0F6E56" stroke-width="1.5" fill="none"/>
+  <rect x="93" y="75" width="14" height="50" rx="2" fill="none" stroke="#0F6E56" stroke-width="1.5"/>
+  <line x1="100" y1="85" x2="100" y2="115" stroke="#0F6E56" stroke-width="1.5"/>
+  <line x1="95" y1="95" x2="105" y2="95" stroke="#0F6E56" stroke-width="1.5"/>
+  <path d="M 85 65 L 115 65 L 115 58 L 125 73 L 115 88 L 115 80 L 85 80 Z" fill="none" stroke="#0F6E56" stroke-width="1.5" stroke-linejoin="round"/>
+  <defs>
+    <path id="vil-top" d="M 30 100 A 70 70 0 0 1 170 100" fill="none"/>
+    <path id="vil-bot" d="M 30 105 A 72 72 0 0 0 170 105" fill="none"/>
+  </defs>
+  <text font-family="sans-serif" font-size="11" font-weight="500" fill="#0F6E56" letter-spacing="1.5">
+    <textPath href="#vil-top" startOffset="50%" text-anchor="middle">VILARINHO</textPath>
+  </text>
+  <text font-family="sans-serif" font-size="7" fill="#0F6E56" letter-spacing="1.5">
+    <textPath href="#vil-bot" startOffset="50%" text-anchor="middle">27 KM DO PORTO</textPath>
+  </text>
+</svg>

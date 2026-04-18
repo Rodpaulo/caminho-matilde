@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="92" fill="none" stroke="#0F6E56" stroke-width="2"/>
+  <circle cx="100" cy="100" r="86" fill="none" stroke="#0F6E56" stroke-width="0.8"/>
+  <rect x="75" y="125" width="50" height="25" fill="none" stroke="#0F6E56" stroke-width="1.5"/>
+  <rect x="82" y="90" width="36" height="35" fill="none" stroke="#0F6E56" stroke-width="1.5"/>
+  <path d="M 82 90 L 82 85 L 86 85 L 86 90 M 89 90 L 89 85 L 93 85 L 93 90 M 96 90 L 96 85 L 100 85 L 100 90 M 103 90 L 103 85 L 107 85 L 107 90 M 110 90 L 110 85 L 114 85 L 114 90 M 117 90 L 117 85 L 121 85 L 121 90" stroke="#0F6E56" stroke-width="1" fill="none"/>
+  <line x1="80" y1="90" x2="120" y2="90" stroke="#0F6E56" stroke-width="1"/>
+  <rect x="88" y="100" width="6" height="8" fill="none" stroke="#0F6E56" stroke-width="0.8"/>
+  <rect x="106" y="100" width="6" height="8" fill="none" stroke="#0F6E56" stroke-width="0.8"/>
+  <rect x="97" y="115" width="6" height="8" fill="none" stroke="#0F6E56" stroke-width="0.8"/>
+  <rect x="75" y="110" width="8" height="15" fill="none" stroke="#0F6E56" stroke-width="1"/>
+  <path d="M 73 110 L 85 110 L 82 105 L 76 105 Z" fill="none" stroke="#0F6E56" stroke-width="1"/>
+  <rect x="117" y="110" width="8" height="15" fill="none" stroke="#0F6E56" stroke-width="1"/>
+  <path d="M 115 110 L 127 110 L 124 105 L 118 105 Z" fill="none" stroke="#0F6E56" stroke-width="1"/>
+  <path d="M 50 155 Q 60 152 70 155 T 90 155 T 110 155 T 130 155 T 150 155" stroke="#0F6E56" stroke-width="0.8" fill="none"/>
+  <g transform="translate(50 65) rotate(20)">
+    <path d="M 0 0 L 18 -2 L 22 0 L 18 2 Z" fill="#0F6E56"/>
+    <path d="M 8 -1 L 4 -7 L 8 -1 L 4 5" stroke="#0F6E56" stroke-width="1" fill="none"/>
+    <path d="M 14 -1 L 12 -4 L 16 -1 L 12 2" stroke="#0F6E56" stroke-width="1" fill="none"/>
+  </g>
+  <path d="M 25 80 Q 35 75 48 68" stroke="#0F6E56" stroke-width="0.8" fill="none" stroke-dasharray="2 2"/>
+  <defs>
+    <path id="lis-top" d="M 30 100 A 70 70 0 0 1 170 100" fill="none"/>
+    <path id="lis-bot" d="M 30 105 A 72 72 0 0 0 170 105" fill="none"/>
+  </defs>
+  <text font-family="sans-serif" font-size="13" font-weight="500" fill="#0F6E56" letter-spacing="2.5">
+    <textPath href="#lis-top" startOffset="50%" text-anchor="middle">LISBOA</textPath>
+  </text>
+  <text font-family="sans-serif" font-size="7" fill="#0F6E56" letter-spacing="1.5">
+    <textPath href="#lis-bot" startOffset="50%" text-anchor="middle">DE VOLTA A CASA</textPath>
+  </text>
+</svg>

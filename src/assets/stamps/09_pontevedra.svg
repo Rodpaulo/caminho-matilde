@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="92" fill="none" stroke="#0F6E56" stroke-width="2"/>
+  <circle cx="100" cy="100" r="86" fill="none" stroke="#0F6E56" stroke-width="0.8"/>
+  <path d="M 100 55 Q 60 65 50 130 Q 60 145 100 148 Q 140 145 150 130 Q 140 65 100 55 Z" fill="none" stroke="#0F6E56" stroke-width="2"/>
+  <path d="M 100 55 L 85 148 M 100 55 L 115 148 M 100 55 L 70 145 M 100 55 L 130 145 M 100 55 L 58 135 M 100 55 L 142 135 M 100 55 L 100 148 M 100 55 L 88 149 M 100 55 L 112 149" stroke="#0F6E56" stroke-width="1" fill="none"/>
+  <path d="M 92 148 L 92 130 Q 100 122 108 130 L 108 148" fill="#FAF9F5" stroke="#0F6E56" stroke-width="1.5"/>
+  <line x1="100" y1="55" x2="100" y2="45" stroke="#0F6E56" stroke-width="1.5"/>
+  <line x1="96" y1="49" x2="104" y2="49" stroke="#0F6E56" stroke-width="1.5"/>
+  <defs>
+    <path id="pon-top" d="M 30 100 A 70 70 0 0 1 170 100" fill="none"/>
+    <path id="pon-bot" d="M 30 105 A 72 72 0 0 0 170 105" fill="none"/>
+  </defs>
+  <text font-family="sans-serif" font-size="11" font-weight="500" fill="#0F6E56" letter-spacing="1.5">
+    <textPath href="#pon-top" startOffset="50%" text-anchor="middle">PONTEVEDRA</textPath>
+  </text>
+  <text font-family="sans-serif" font-size="7" fill="#0F6E56" letter-spacing="1.5">
+    <textPath href="#pon-bot" startOffset="50%" text-anchor="middle">VIRXE PEREGRINA</textPath>
+  </text>
+</svg>
