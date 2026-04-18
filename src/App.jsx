@@ -1,32 +1,42 @@
-import { useCaminho } from './hooks/useCaminho';
+import { useState } from 'react';
+import { uploadToCloudinary } from './lib/cloudinary';
 
 export default function App() {
-  const { data, loading, error, update } = useCaminho();
+  const [url, setUrl] = useState(null);
+  const [status, setStatus] = useState('idle');
+  const [error, setError] = useState(null);
 
-  function toggleName() {
-    update(current => ({
-      ...current,
-      pilgrim: {
-        ...current.pilgrim,
-        name: current.pilgrim.name === 'Matilde' ? 'Matilde ✓' : 'Matilde',
-      },
-    }));
+  async function handleFileChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setStatus('uploading');
+    setError(null);
+    setUrl(null);
+
+    try {
+      const secureUrl = await uploadToCloudinary(file);
+      setUrl(secureUrl);
+      setStatus('done');
+    } catch (err) {
+      setError(err.message);
+      setStatus('error');
+    }
   }
-
-  if (loading) return <div style={{ padding: 40 }}>loading...</div>;
 
   return (
     <div style={{ padding: 40, fontFamily: 'system-ui' }}>
-      <h1>useCaminho hook test</h1>
-      <p><strong>Status:</strong> {error === 'offline' ? '🔴 offline (queued)' : '🟢 online'}</p>
-      <p><strong>Pilgrim name:</strong> {data?.pilgrim?.name}</p>
-      <button onClick={toggleName} style={{ padding: '10px 20px', fontSize: 16 }}>
-        Toggle name
-      </button>
-      <p style={{ fontSize: 12, color: '#666', marginTop: 20 }}>
-        Tap the button — the name changes instantly (optimistic update)
-        and writes to JSONBin in the background.
-      </p>
+      <h1>Cloudinary upload test</h1>
+      <input type="file" accept="image/*" onChange={handleFileChange} />
+      <p><strong>Status:</strong> {status}</p>
+      {error && <p style={{ color: 'red' }}><strong>Error:</strong> {error}</p>}
+      {url && (
+        <>
+          <p><strong>Upload succeeded.</strong></p>
+          <p><a href={url} target="_blank" rel="noopener">{url}</a></p>
+          <img src={url} alt="uploaded" style={{ maxWidth: 400, marginTop: 20, border: '1px solid #ccc' }} />
+        </>
+      )}
     </div>
   );
 }
