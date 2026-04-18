@@ -1,42 +1,24 @@
-import { useState } from 'react';
-import { uploadToCloudinary } from './lib/cloudinary';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import PilgrimApp from './pages/PilgrimApp';
+import FollowPage from './pages/FollowPage';
 
 export default function App() {
-  const [url, setUrl] = useState(null);
-  const [status, setStatus] = useState('idle');
-  const [error, setError] = useState(null);
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<PilgrimApp />} />
+        <Route path="/follow/:token" element={<FollowPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
 
-  async function handleFileChange(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setStatus('uploading');
-    setError(null);
-    setUrl(null);
-
-    try {
-      const secureUrl = await uploadToCloudinary(file);
-      setUrl(secureUrl);
-      setStatus('done');
-    } catch (err) {
-      setError(err.message);
-      setStatus('error');
-    }
-  }
-
+function NotFound() {
   return (
     <div style={{ padding: 40, fontFamily: 'system-ui' }}>
-      <h1>Cloudinary upload test</h1>
-      <input type="file" accept="image/*" onChange={handleFileChange} />
-      <p><strong>Status:</strong> {status}</p>
-      {error && <p style={{ color: 'red' }}><strong>Error:</strong> {error}</p>}
-      {url && (
-        <>
-          <p><strong>Upload succeeded.</strong></p>
-          <p><a href={url} target="_blank" rel="noopener">{url}</a></p>
-          <img src={url} alt="uploaded" style={{ maxWidth: 400, marginTop: 20, border: '1px solid #ccc' }} />
-        </>
-      )}
+      <h1>Página não encontrada</h1>
+      <p>Esta página não existe.</p>
     </div>
   );
 }
