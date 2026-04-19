@@ -24,7 +24,6 @@ function getStageState(stage) {
   return 'not-started';
 }
 
-// Weather status → readable label for Santiago's context
 const WEATHER_TEXT = {
   great: 'dia bom',
   'tired-good': 'cansada mas bem',
@@ -39,13 +38,22 @@ export default function SantiagoScreen() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const scrollRef = useRef(null);
+  const textareaRef = useRef(null);
 
-  // Scroll to bottom whenever history changes
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [data?.santiagoHistory]);
+
+  // Auto-resize the textarea as content grows, capped at a max height
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    const newHeight = Math.min(ta.scrollHeight, 96); // max ~4 lines
+    ta.style.height = newHeight + 'px';
+  }, [input]);
 
   if (loading || !data) {
     return (
@@ -81,11 +89,9 @@ export default function SantiagoScreen() {
     setError(null);
     setSending(true);
 
-    // Add the user message to history immediately (optimistic)
     const userMessage = { role: 'user', content: text };
     const newHistory = [...history, userMessage];
 
-    // Save the user message first so it shows up
     await update(current => ({
       ...current,
       santiagoHistory: newHistory,
@@ -94,7 +100,6 @@ export default function SantiagoScreen() {
     try {
       const { reply } = await askSantiago(newHistory, buildContext());
 
-      // Add Santiago's reply to history
       await update(current => ({
         ...current,
         santiagoHistory: [...newHistory, { role: 'assistant', content: reply }],
@@ -107,7 +112,6 @@ export default function SantiagoScreen() {
   }
 
   function handleInputKeyDown(e) {
-    // Send on Enter, but allow Shift+Enter for newlines
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -130,7 +134,7 @@ export default function SantiagoScreen() {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: 'calc(100vh - 80px)', // Leave room for the bottom nav
+      height: 'calc(100vh - 80px)',
       background: '#2C2C2A',
       color: '#F1EFE8',
     }}>
@@ -141,6 +145,7 @@ export default function SantiagoScreen() {
         display: 'flex',
         alignItems: 'center',
         gap: 12,
+        flexShrink: 0,
       }}>
         <div style={{
           width: 36,
@@ -152,10 +157,11 @@ export default function SantiagoScreen() {
           justifyContent: 'center',
           fontSize: 16,
           color: 'white',
+          flexShrink: 0,
         }}>
           ✦
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 14, fontWeight: 500, margin: 0, color: '#F1EFE8' }}>
             Santiago
           </p>
@@ -175,6 +181,7 @@ export default function SantiagoScreen() {
               padding: '5px 10px',
               borderRadius: 999,
               cursor: 'pointer',
+              flexShrink: 0,
             }}
           >
             nova conversa
@@ -189,9 +196,10 @@ export default function SantiagoScreen() {
           flex: 1,
           overflowY: 'auto',
           padding: '16px 16px 20px',
+          minHeight: 0,
         }}
       >
-        {!hasHistory && !sending && <WelcomeMessage stage={currentStage} />}
+        {!hasHistory && !sending && <WelcomeMessage />}
 
         {history.map((msg, i) => (
           <Message key={i} role={msg.role} content={msg.content} />
@@ -219,6 +227,7 @@ export default function SantiagoScreen() {
         padding: '10px 12px 14px',
         borderTop: '0.5px solid #444441',
         background: '#2C2C2A',
+        flexShrink: 0,
       }}>
         <div style={{
           display: 'flex',
@@ -229,6 +238,7 @@ export default function SantiagoScreen() {
           padding: '6px 6px 6px 14px',
         }}>
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleInputKeyDown}
@@ -236,6 +246,7 @@ export default function SantiagoScreen() {
             rows={1}
             style={{
               flex: 1,
+              minWidth: 0,
               background: 'transparent',
               border: 'none',
               color: '#F1EFE8',
@@ -244,8 +255,8 @@ export default function SantiagoScreen() {
               resize: 'none',
               padding: '6px 0',
               outline: 'none',
-              maxHeight: 120,
               lineHeight: 1.4,
+              overflow: 'auto',
             }}
             disabled={sending}
           />
@@ -296,6 +307,7 @@ function Message({ role, content }) {
         fontSize: 13.5,
         lineHeight: 1.5,
         whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
       }}>
         {content}
       </div>
@@ -338,7 +350,7 @@ function dotStyle(delay) {
   };
 }
 
-function WelcomeMessage({ stage }) {
+function WelcomeMessage() {
   return (
     <div style={{
       textAlign: 'center',
