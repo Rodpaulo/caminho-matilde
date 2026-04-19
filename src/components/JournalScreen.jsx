@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useCaminho } from '../hooks/useCaminho';
 import { PROMPTS } from '../data/stages';
+import { uploadToCloudinary } from '../lib/cloudinary';
 import DayPillNav from './DayPillNav';
 
 function findTodayStage(stages) {
@@ -24,6 +25,9 @@ export default function JournalScreen() {
   const [text, setText] = useState('');
   const [shared, setShared] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const photoInputRef = useRef(null);
 
   if (loading || !data) {
     return <div style={{ padding: 24, color: '#888780' }}>A carregar...</div>;
@@ -38,32 +42,63 @@ export default function JournalScreen() {
     .filter(e => e.stageId === stage.id)
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  async function handleSave() {
-    if (!text.trim()) return;
-    setSaving(true);
+  function handlePhotoPick(event) {
+    const file = event.target.files[0];
+    if (!file) return;
 
-    const newEntry = {
-      id: `entry-${Date.now()}`,
-      stageId: stage.id,
-      date: new Date().toISOString(),
-      prompt,
-      text: text.trim(),
-      voiceUrl: null,
-      photoUrl: null,
-      shared,
-    };
-
-    await update(current => ({
-      ...current,
-      journal: [...current.journal, newEntry],
-    }));
-
-    setText('');
-    setShared(false);
-    setSaving(false);
+    // Create a local preview URL so she can see it before uploading
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoFile(file);
+    setPhotoPreview(previewUrl);
   }
 
-  const canSave = text.trim().length > 0 && !saving;
+  function handlePhotoRemove() {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    // Also reset the file input so the same file can be picked again
+    if (photoInputRef.current) photoInputRef.current.value = '';
+  }
+
+  async function handleSave() {
+    if (!text.trim() && !photoFile) return;
+    setSaving(true);
+
+    let photoUrl = null;
+    try {
+      if (photoFile) {
+        photoUrl = await uploadToCloudinary(photoFile, 'image');
+      }
+
+      const newEntry = {
+        id: `entry-${Date.now()}`,
+        stageId: stage.id,
+        date: new Date().toISOString(),
+        prompt,
+        text: text.trim(),
+        voiceUrl: null,
+        photoUrl,
+        shared,
+      };
+
+      await update(current => ({
+        ...current,
+        journal: [...current.journal, newEntry],
+      }));
+
+      // Reset form
+      setText('');
+      setShared(false);
+      handlePhotoRemove();
+    } catch (err) {
+      alert('Não consegui guardar: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const hasContent = text.trim().length > 0 || photoFile;
+  const canSave = hasContent && !saving;
 
   return (
     <div style={{ padding: '24px 20px', maxWidth: 420, margin: '0 auto' }}>
@@ -129,6 +164,45 @@ export default function JournalScreen() {
           }}
         />
 
+        {/* Photo preview */}
+        {photoPreview && (
+          <div style={{ marginBottom: 14, position: 'relative' }}>
+            <img
+              src={photoPreview}
+              alt="pré-visualização"
+              style={{
+                width: '100%',
+                maxHeight: 240,
+                objectFit: 'cover',
+                borderRadius: 12,
+                display: 'block',
+              }}
+            />
+            <button
+              onClick={handlePhotoRemove}
+              aria-label="Remover foto"
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: 'rgba(44, 44, 42, 0.7)',
+                color: 'white',
+                border: 'none',
+                fontSize: 16,
+                cursor: 'pointer',
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {/* Action buttons row */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
           <button
             disabled
@@ -146,22 +220,31 @@ export default function JournalScreen() {
           >
             ● gravar voz
           </button>
-          <button
-            disabled
+          <label
             style={{
               flex: 1,
-              background: 'transparent',
-              border: '0.5px solid #B4B2A9',
+              background: photoFile ? '#E1F5EE' : 'transparent',
+              border: photoFile ? '1px solid #0F6E56' : '0.5px solid #B4B2A9',
               borderRadius: 999,
               padding: '8px 10px',
               fontSize: 12,
-              color: '#2C2C2A',
-              cursor: 'not-allowed',
-              opacity: 0.6,
+              color: photoFile ? '#04342C' : '#2C2C2A',
+              cursor: 'pointer',
+              textAlign: 'center',
+              display: 'block',
+              boxSizing: 'border-box',
+              fontWeight: photoFile ? 500 : 400,
             }}
           >
-            ◉ foto
-          </button>
+            ◉ {photoFile ? 'foto pronta' : 'foto'}
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoPick}
+              style={{ display: 'none' }}
+            />
+          </label>
         </div>
 
         <div style={{
@@ -204,7 +287,9 @@ export default function JournalScreen() {
             transition: 'background 0.15s',
           }}
         >
-          {saving ? 'A guardar...' : 'Guardar no diário'}
+          {saving
+            ? (photoFile ? 'A enviar e guardar...' : 'A guardar...')
+            : 'Guardar no diário'}
         </button>
 
         {!isViewingToday && (
@@ -288,15 +373,31 @@ function JournalEntry({ entry }) {
       }}>
         {entry.prompt}
       </p>
-      <p style={{
-        fontSize: 13,
-        color: '#2C2C2A',
-        margin: 0,
-        lineHeight: 1.5,
-        whiteSpace: 'pre-wrap',
-      }}>
-        {entry.text}
-      </p>
+      {entry.text && (
+        <p style={{
+          fontSize: 13,
+          color: '#2C2C2A',
+          margin: '0 0 8px',
+          lineHeight: 1.5,
+          whiteSpace: 'pre-wrap',
+        }}>
+          {entry.text}
+        </p>
+      )}
+      {entry.photoUrl && (
+        <img
+          src={entry.photoUrl}
+          alt="foto do dia"
+          style={{
+            width: '100%',
+            maxHeight: 280,
+            objectFit: 'cover',
+            borderRadius: 10,
+            marginTop: entry.text ? 4 : 0,
+            display: 'block',
+          }}
+        />
+      )}
     </div>
   );
 }
