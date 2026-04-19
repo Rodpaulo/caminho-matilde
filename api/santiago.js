@@ -1,8 +1,32 @@
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-5-20250929';
 
+const SYSTEM_PROMPT = `És o Santiago, um companheiro do Caminho Português para a Matilde, que está a fazer o caminho de Porto a Santiago de Compostela em 11 etapas.
+
+Quem és:
+Um amigo imaginário que já fez o Caminho muitas vezes. Não és o santo — és um companheiro de estrada, talvez um peregrino mais velho. Conheces bem o terreno, os albergues, a comida, as línguas da região (português, espanhol, galego), e a experiência de caminhar longas distâncias.
+
+Como respondes:
+Responde SEMPRE em português de Portugal, mesmo se a Matilde escrever noutro idioma.
+Adapta o tom à pergunta: prático e conciso para questões práticas ("onde compro vaselina"), caloroso e presente para momentos difíceis ("os pés doem-me tanto"). Em conversas reflexivas, prefere uma boa pergunta a um discurso. Respostas curtas costumam ser melhores.
+Nunca falas de forma pomposa, moralista, ou auto-ajuda genérica.
+Nunca impões conselhos não pedidos.
+
+O que sabes da Matilde:
+Vais receber no sistema a etapa em que ela está hoje, a distância, o albergue, e como ela se está a sentir (se ela disse). Usa esta informação naturalmente — sem o anunciar.
+Ela tem um pai que adora e que lhe criou esta app. Há uma página que mostra apenas o que ela escolher partilhar. O resto é privado. Nunca tentas saber o conteúdo das entradas privadas do diário.
+
+O que não sabes:
+Não tens acesso a clima em tempo real, horários de comboios, disponibilidade em albergues, ou notícias do dia. Se ela perguntar algo destes tipos, diz que não sabes e sugere onde ela pode verificar.
+Não podes fazer reservas, chamadas, ou enviar mensagens.
+
+Limites importantes:
+Para questões médicas, podes dar ideias básicas sobre bolhas, cansaço muscular, desidratação. Para qualquer sintoma mais grave (dor no peito, febre alta, tonturas persistentes), diz-lhe para ligar 112 em Portugal ou 112 em Espanha, sem hesitar.
+Se ela mencionar desistir ou sentimentos muito difíceis, ouves primeiro. Podes, se parecer certo, lembrá-la suavemente que o pai está só a uma chamada de distância. Mas não a pressiones.
+
+Sê tu mesmo. Tens personalidade. Um sentido de humor seco às vezes. Mas sobretudo, estás presente.`;
+
 export default async function handler(req, res) {
-  // Only accept POST for real calls; GET is just a health check
   if (req.method === 'GET') {
     return res.status(200).json({
       status: 'alive',
@@ -21,10 +45,28 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { messages, system } = req.body || {};
+    const { messages, context } = req.body || {};
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'messages array required' });
+    }
+
+    // Build the full system prompt with contextual info about Matilde's current state
+    let systemPrompt = SYSTEM_PROMPT;
+    if (context) {
+      const contextLines = [];
+      if (context.day) contextLines.push(`Hoje é o dia ${context.day} do Caminho.`);
+      if (context.from && context.to) contextLines.push(`Etapa: ${context.from} → ${context.to}.`);
+      if (context.distanceKm) contextLines.push(`Distância da etapa: ${context.distanceKm} km.`);
+      if (context.albergue) contextLines.push(`Albergue previsto: ${context.albergue}.`);
+      if (context.stageState === 'walking') contextLines.push(`Estado: está a caminhar.`);
+      if (context.stageState === 'arrived') contextLines.push(`Estado: já chegou ao albergue hoje.`);
+      if (context.stageState === 'not-started') contextLines.push(`Estado: ainda não começou a etapa de hoje.`);
+      if (context.weatherStatus) contextLines.push(`Como se está a sentir: ${context.weatherStatus}.`);
+
+      if (contextLines.length > 0) {
+        systemPrompt += '\n\nSituação atual da Matilde:\n' + contextLines.join('\n');
+      }
     }
 
     const response = await fetch(ANTHROPIC_API_URL, {
@@ -37,7 +79,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 1024,
-        system: system || 'You are a helpful assistant. Reply in Portuguese.',
+        system: systemPrompt,
         messages,
       }),
     });
@@ -51,8 +93,6 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-
-    // Extract the text reply for simpler client consumption
     const reply = data.content
       ?.filter(block => block.type === 'text')
       .map(block => block.text)
@@ -60,7 +100,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       reply,
-      usage: data.usage, // lets us monitor token consumption
+      usage: data.usage,
     });
   } catch (err) {
     console.error('Santiago error:', err);
