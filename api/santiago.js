@@ -1,6 +1,16 @@
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-5-20250929';
 
+// Keep the most recent N turns of conversation for context.
+// Older messages are dropped from what we send to Anthropic (but still shown to the user).
+// 20 turns = up to 10 user messages + 10 assistant replies.
+const MAX_CONTEXT_MESSAGES = 20;
+
+// Rough guardrail against runaway conversations.
+// Not strictly enforced per-user (no auth), but prevents a single request from
+// shipping absurdly long histories that would cost a lot per call.
+const MAX_MESSAGES_PER_REQUEST = 200;
+
 const SYSTEM_PROMPT = `És o Santiago, um companheiro do Caminho Português para a Matilde, que está a fazer o caminho de Porto a Santiago de Compostela em 11 etapas.
 
 Quem és:
@@ -31,6 +41,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       status: 'alive',
       model: MODEL,
+      maxContext: MAX_CONTEXT_MESSAGES,
       timestamp: new Date().toISOString(),
     });
   }
@@ -51,7 +62,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'messages array required' });
     }
 
-    // Build the full system prompt with contextual info about Matilde's current state
+    // Guardrail: refuse absurdly long conversations
+    if (messages.length > MAX_MESSAGES_PER_REQUEST) {
+      return res.status(400).json({
+        error: 'Conversation too long. Please start a new one.',
+      });
+    }
+
+    // Trim history to the most recent MAX_CONTEXT_MESSAGES messages.
+    // This keeps per-request costs predictable even as conversations grow.
+    const trimmedMessages = messages.length > MAX_CONTEXT_MESSAGES
+      ? messages.slice(-MAX_CONTEXT_MESSAGES)
+      : messages;
+
     let systemPrompt = SYSTEM_PROMPT;
     if (context) {
       const contextLines = [];
@@ -69,6 +92,11 @@ export default async function handler(req, res) {
       }
     }
 
+    // If we trimmed, let Santiago know so he doesn't pretend to remember older turns
+    if (messages.length > MAX_CONTEXT_MESSAGES) {
+      systemPrompt += `\n\nNota: esta conversa já é longa. Tens acesso às últimas ${MAX_CONTEXT_MESSAGES} mensagens. Mensagens anteriores não estão visíveis para ti. Se a Matilde se referir a algo que não vês, podes pedir-lhe que te relembre.`;
+    }
+
     const response = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
       headers: {
@@ -80,7 +108,7 @@ export default async function handler(req, res) {
         model: MODEL,
         max_tokens: 1024,
         system: systemPrompt,
-        messages,
+        messages: trimmedMessages,
       }),
     });
 
@@ -101,6 +129,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       reply,
       usage: data.usage,
+      trimmed: messages.length > MAX_CONTEXT_MESSAGES,
     });
   } catch (err) {
     console.error('Santiago error:', err);
