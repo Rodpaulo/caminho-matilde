@@ -4,8 +4,6 @@ import { readBin, writeBin } from '../lib/jsonbin';
 const CACHE_KEY = 'caminho-cache';
 const QUEUE_KEY = 'caminho-queue';
 
-// Validate that a bin object has all the essential fields before writing.
-// This prevents a stale/corrupt local cache from destroying the real bin.
 function isValidBin(data) {
   if (!data) return false;
   if (!data.pilgrim || !data.pilgrim.followToken) return false;
@@ -13,6 +11,15 @@ function isValidBin(data) {
   if (!Array.isArray(data.journal)) return false;
   if (!Array.isArray(data.bingo)) return false;
   return true;
+}
+
+// Auto-initialize optional fields so features added later don't break existing bins
+function withDefaults(data) {
+  if (!data) return data;
+  return {
+    ...data,
+    santiagoHistory: Array.isArray(data.santiagoHistory) ? data.santiagoHistory : [],
+  };
 }
 
 export function useCaminho() {
@@ -25,23 +32,21 @@ export function useCaminho() {
       setLoading(true);
       const fresh = await readBin();
       if (isValidBin(fresh)) {
-        setData(fresh);
-        localStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
+        const normalized = withDefaults(fresh);
+        setData(normalized);
+        localStorage.setItem(CACHE_KEY, JSON.stringify(normalized));
         setError(null);
       } else {
-        // Server returned invalid data — don't overwrite local cache
         throw new Error('Invalid bin structure received from server');
       }
     } catch (err) {
-      // Offline fallback: use cached data if available and valid
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (isValidBin(parsed)) {
-          setData(parsed);
+          setData(withDefaults(parsed));
           setError('offline');
         } else {
-          // Cache is also bad — clear it to force a fresh fetch next time
           localStorage.removeItem(CACHE_KEY);
           setError(err.message);
         }
@@ -60,16 +65,12 @@ export function useCaminho() {
   const update = useCallback(async (updater) => {
     const newData = updater(data);
 
-    // Guard: refuse to write an invalid bin. This prevents a bug anywhere in
-    // the app from accidentally destroying the follow token or corrupting
-    // the stage list.
     if (!isValidBin(newData)) {
       console.error('Refused to write invalid bin:', newData);
       setError('invalid-write-blocked');
       return;
     }
 
-    // Optimistic update: show the change immediately
     setData(newData);
     localStorage.setItem(CACHE_KEY, JSON.stringify(newData));
 
