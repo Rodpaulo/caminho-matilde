@@ -256,7 +256,7 @@ export default function SantiagoScreen() {
               background: 'transparent',
               border: 'none',
               color: '#F1EFE8',
-              fontSize: 14,
+              fontSize: 16,
               fontFamily: 'inherit',
               resize: 'none',
               padding: '6px 0',
