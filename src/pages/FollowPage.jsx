@@ -73,7 +73,6 @@ export default function FollowPage() {
     }
 
     load();
-    // Refresh every 60 seconds
     const id = setInterval(load, 60000);
     return () => { mounted = false; clearInterval(id); };
   }, [token]);
@@ -119,7 +118,6 @@ export default function FollowPage() {
 
   return (
     <FollowLayout>
-      {/* Avatar + name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <div style={{
           width: 40,
@@ -145,7 +143,6 @@ export default function FollowPage() {
         </div>
       </div>
 
-      {/* Weather status — the emotional center */}
       <div style={{
         textAlign: 'center',
         padding: '24px 0',
@@ -171,7 +168,6 @@ export default function FollowPage() {
         )}
       </div>
 
-      {/* Distance stats */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-around',
@@ -198,7 +194,6 @@ export default function FollowPage() {
         </div>
       </div>
 
-      {/* Last stamp collected */}
       {lastStamped && (
         <div style={{
           background: '#3a3a38',
@@ -218,10 +213,8 @@ export default function FollowPage() {
         </div>
       )}
 
-      {/* Shared journal entries */}
       <SharedJournal data={data} />
 
-      {/* Footer note */}
       <p style={{
         fontSize: 10,
         color: '#5F5E5A',
@@ -276,9 +269,37 @@ function SharedJournal({ data }) {
             <p style={{ fontSize: 11, color: '#888780', fontStyle: 'italic', margin: '0 0 4px' }}>
               {entry.prompt}
             </p>
-            <p style={{ fontSize: 13, color: '#F1EFE8', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-              {entry.text}
-            </p>
+            {entry.text && (
+              <p style={{ fontSize: 13, color: '#F1EFE8', margin: '0 0 8px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                {entry.text}
+              </p>
+            )}
+            {entry.photoUrl && (
+              <img
+                src={entry.photoUrl}
+                alt="foto partilhada"
+                style={{
+                  width: '100%',
+                  maxHeight: 320,
+                  objectFit: 'cover',
+                  borderRadius: 8,
+                  marginTop: entry.text ? 4 : 0,
+                  display: 'block',
+                }}
+              />
+            )}
+            {entry.voiceUrl && (
+              <audio
+                controls
+                src={entry.voiceUrl}
+                style={{
+                  width: '100%',
+                  height: 36,
+                  marginTop: (entry.text || entry.photoUrl) ? 8 : 0,
+                  // Safari dark mode workaround — the audio controls look pale on dark; this is acceptable
+                }}
+              />
+            )}
           </div>
         );
       })}

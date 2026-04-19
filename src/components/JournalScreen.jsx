@@ -3,6 +3,7 @@ import { useCaminho } from '../hooks/useCaminho';
 import { PROMPTS } from '../data/stages';
 import { uploadToCloudinary } from '../lib/cloudinary';
 import DayPillNav from './DayPillNav';
+import VoiceRecorder from './VoiceRecorder';
 
 function findTodayStage(stages) {
   const inProgress = stages.find(s => s.startedAt && !s.arrivedAt);
@@ -27,7 +28,9 @@ export default function JournalScreen() {
   const [saving, setSaving] = useState(false);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [voiceBlob, setVoiceBlob] = useState(null);
   const photoInputRef = useRef(null);
+  const voiceRecorderRef = useRef(null);
 
   if (loading || !data) {
     return <div style={{ padding: 24, color: '#888780' }}>A carregar...</div>;
@@ -45,8 +48,6 @@ export default function JournalScreen() {
   function handlePhotoPick(event) {
     const file = event.target.files[0];
     if (!file) return;
-
-    // Create a local preview URL so she can see it before uploading
     const previewUrl = URL.createObjectURL(file);
     setPhotoFile(file);
     setPhotoPreview(previewUrl);
@@ -56,18 +57,36 @@ export default function JournalScreen() {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoFile(null);
     setPhotoPreview(null);
-    // Also reset the file input so the same file can be picked again
     if (photoInputRef.current) photoInputRef.current.value = '';
   }
 
+  function handleVoiceReady(blob) {
+    setVoiceBlob(blob);
+  }
+
+  function handleVoiceRemove() {
+    setVoiceBlob(null);
+  }
+
+  function handleStartVoice() {
+    if (voiceRecorderRef.current) {
+      voiceRecorderRef.current.start();
+    }
+  }
+
   async function handleSave() {
-    if (!text.trim() && !photoFile) return;
+    if (!text.trim() && !photoFile && !voiceBlob) return;
     setSaving(true);
 
-    let photoUrl = null;
     try {
+      let photoUrl = null;
+      let voiceUrl = null;
+
       if (photoFile) {
         photoUrl = await uploadToCloudinary(photoFile, 'image');
+      }
+      if (voiceBlob) {
+        voiceUrl = await uploadToCloudinary(voiceBlob, 'video');
       }
 
       const newEntry = {
@@ -76,7 +95,7 @@ export default function JournalScreen() {
         date: new Date().toISOString(),
         prompt,
         text: text.trim(),
-        voiceUrl: null,
+        voiceUrl,
         photoUrl,
         shared,
       };
@@ -86,10 +105,10 @@ export default function JournalScreen() {
         journal: [...current.journal, newEntry],
       }));
 
-      // Reset form
       setText('');
       setShared(false);
       handlePhotoRemove();
+      handleVoiceRemove();
     } catch (err) {
       alert('Não consegui guardar: ' + err.message);
     } finally {
@@ -97,7 +116,7 @@ export default function JournalScreen() {
     }
   }
 
-  const hasContent = text.trim().length > 0 || photoFile;
+  const hasContent = text.trim().length > 0 || photoFile || voiceBlob;
   const canSave = hasContent && !saving;
 
   return (
@@ -164,7 +183,13 @@ export default function JournalScreen() {
           }}
         />
 
-        {/* Photo preview */}
+        <VoiceRecorder
+          ref={voiceRecorderRef}
+          voiceBlob={voiceBlob}
+          onVoiceReady={handleVoiceReady}
+          onVoiceRemove={handleVoiceRemove}
+        />
+
         {photoPreview && (
           <div style={{ marginBottom: 14, position: 'relative' }}>
             <img
@@ -202,24 +227,42 @@ export default function JournalScreen() {
           </div>
         )}
 
-        {/* Action buttons row */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-          <button
-            disabled
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: '0.5px solid #B4B2A9',
-              borderRadius: 999,
-              padding: '8px 10px',
-              fontSize: 12,
-              color: '#2C2C2A',
-              cursor: 'not-allowed',
-              opacity: 0.6,
-            }}
-          >
-            ● gravar voz
-          </button>
+          {voiceBlob ? (
+            <button
+              disabled
+              style={{
+                flex: 1,
+                background: '#E1F5EE',
+                border: '1px solid #0F6E56',
+                borderRadius: 999,
+                padding: '8px 10px',
+                fontSize: 12,
+                color: '#04342C',
+                fontWeight: 500,
+                cursor: 'not-allowed',
+              }}
+            >
+              ● voz pronta
+            </button>
+          ) : (
+            <button
+              onClick={handleStartVoice}
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: '0.5px solid #B4B2A9',
+                borderRadius: 999,
+                padding: '8px 10px',
+                fontSize: 12,
+                color: '#2C2C2A',
+                cursor: 'pointer',
+              }}
+            >
+              ● gravar voz
+            </button>
+          )}
+
           <label
             style={{
               flex: 1,
@@ -287,9 +330,7 @@ export default function JournalScreen() {
             transition: 'background 0.15s',
           }}
         >
-          {saving
-            ? (photoFile ? 'A enviar e guardar...' : 'A guardar...')
-            : 'Guardar no diário'}
+          {saving ? 'A enviar e guardar...' : 'Guardar no diário'}
         </button>
 
         {!isViewingToday && (
@@ -395,6 +436,17 @@ function JournalEntry({ entry }) {
             borderRadius: 10,
             marginTop: entry.text ? 4 : 0,
             display: 'block',
+          }}
+        />
+      )}
+      {entry.voiceUrl && (
+        <audio
+          controls
+          src={entry.voiceUrl}
+          style={{
+            width: '100%',
+            height: 36,
+            marginTop: (entry.text || entry.photoUrl) ? 8 : 0,
           }}
         />
       )}
