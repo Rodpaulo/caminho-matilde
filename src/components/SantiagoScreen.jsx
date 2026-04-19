@@ -228,6 +228,8 @@ export default function SantiagoScreen() {
         borderTop: '0.5px solid #444441',
         background: '#2C2C2A',
         flexShrink: 0,
+        width: '100%',
+        boxSizing: 'border-box',
       }}>
         <div style={{
           display: 'flex',
@@ -236,6 +238,9 @@ export default function SantiagoScreen() {
           background: '#3a3a38',
           borderRadius: 20,
           padding: '6px 6px 6px 14px',
+          width: '100%',
+          boxSizing: 'border-box',
+          maxWidth: '100%',
         }}>
           <textarea
             ref={textareaRef}
@@ -245,8 +250,9 @@ export default function SantiagoScreen() {
             placeholder="Fala com o Santiago..."
             rows={1}
             style={{
-              flex: 1,
+              flex: '1 1 0',
               minWidth: 0,
+              width: 0,
               background: 'transparent',
               border: 'none',
               color: '#F1EFE8',
@@ -257,6 +263,7 @@ export default function SantiagoScreen() {
               outline: 'none',
               lineHeight: 1.4,
               overflow: 'auto',
+              boxSizing: 'border-box',
             }}
             disabled={sending}
           />
