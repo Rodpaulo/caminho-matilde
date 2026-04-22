@@ -46,6 +46,25 @@ function findCurrentStage(stages) {
   return stages[stages.length - 1];
 }
 
+// Find the timestamp of the most recent activity of any kind:
+// stage starts, stage arrivals, or shared journal entries.
+// Returns null if nothing has happened yet.
+function findMostRecentActivity(data) {
+  const timestamps = [];
+
+  for (const stage of data.stages) {
+    if (stage.startedAt) timestamps.push(stage.startedAt);
+    if (stage.arrivedAt) timestamps.push(stage.arrivedAt);
+  }
+  for (const entry of data.journal) {
+    if (entry.shared && entry.date) timestamps.push(entry.date);
+  }
+
+  if (timestamps.length === 0) return null;
+  timestamps.sort();
+  return timestamps[timestamps.length - 1];
+}
+
 export default function FollowPage() {
   const { token } = useParams();
   const [data, setData] = useState(null);
@@ -106,18 +125,15 @@ export default function FollowPage() {
   const walkedKm = arrivedStages.reduce((sum, s) => sum + s.distanceKm, 0);
   const remainingKm = totalKm - walkedKm;
   const lastStamped = [...data.stages].reverse().find(s => s.arrivedAt);
+  const totalStages = data.stages.length;
+  const mostRecentActivity = findMostRecentActivity(data);
 
-  // Gather shared entries newest first — used both for the dominant display and the list
   const sharedEntries = data.journal
     .filter(e => e.shared)
     .sort((a, b) => b.date.localeCompare(a.date));
 
   const latestShared = sharedEntries[0] ?? null;
 
-  // Decide what signal dominates the top of the page.
-  // If weather is set for the current stage, weather wins.
-  // Otherwise, if there's a shared entry, that entry becomes the heart of the page.
-  // Otherwise, we show the quiet "sem notícias ainda" state.
   const weather = current.weatherStatus;
   const dominantSignal = weather
     ? 'weather'
@@ -125,7 +141,6 @@ export default function FollowPage() {
       ? 'entry'
       : 'silent';
 
-  // Pick the right timestamp for the "há X" line under the dominant signal
   const dominantTimestamp =
     dominantSignal === 'weather'
       ? (current.arrivedAt || current.startedAt)
@@ -133,17 +148,23 @@ export default function FollowPage() {
         ? latestShared.date
         : null;
 
-  // When the dominant signal is a journal entry, we don't want to duplicate it
-  // in the PARTILHAS list below. So skip the first entry if it's the dominant one.
   const otherSharedEntries = dominantSignal === 'entry'
     ? sharedEntries.slice(1)
     : sharedEntries;
 
-  const stageLabel = current.startedAt && !current.arrivedAt
+  // Build the geographic line for her current position
+  const placeLine = current.startedAt && !current.arrivedAt
     ? `${current.from} → ${current.to}`
     : current.arrivedAt
     ? `chegou a ${current.to}`
     : `a caminho de ${current.from}`;
+
+  // Build the progress and freshness line below the place
+  const progressParts = [`etapa ${current.day} de ${totalStages}`];
+  if (mostRecentActivity) {
+    progressParts.push(`atualizada ${timeAgo(mostRecentActivity)}`);
+  }
+  const progressLine = progressParts.join(' · ');
 
   return (
     <FollowLayout>
@@ -159,15 +180,19 @@ export default function FollowPage() {
           fontSize: 15,
           fontWeight: 500,
           color: 'white',
+          flexShrink: 0,
         }}>
           {data.pilgrim.name.charAt(0)}
         </div>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#F1EFE8' }}>
             {data.pilgrim.name}
           </p>
-          <p style={{ fontSize: 11, color: '#888780', margin: 0 }}>
-            dia {current.day} · {stageLabel}
+          <p style={{ fontSize: 12, color: '#D3D1C7', margin: '2px 0 0' }}>
+            {placeLine}
+          </p>
+          <p style={{ fontSize: 10, color: '#888780', margin: '2px 0 0' }}>
+            {progressLine}
           </p>
         </div>
       </div>
@@ -287,13 +312,13 @@ export default function FollowPage() {
         marginBottom: 20,
       }}>
         <div>
-          <p style={{ fontSize: 11, color: '#888780', margin: '0 0 3px' }}>hoje</p>
+          <p style={{ fontSize: 11, color: '#888780', margin: '0 0 3px' }}>esta etapa</p>
           <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#F1EFE8' }}>
             {current.distanceKm} km
           </p>
         </div>
         <div>
-          <p style={{ fontSize: 11, color: '#888780', margin: '0 0 3px' }}>total</p>
+          <p style={{ fontSize: 11, color: '#888780', margin: '0 0 3px' }}>caminhado</p>
           <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#F1EFE8' }}>
             {walkedKm} km
           </p>
@@ -361,6 +386,7 @@ function OtherSharedJournal({ entries, stages }) {
       {entries.map(entry => {
         const stage = stages.find(s => s.id === entry.stageId);
         const date = new Date(entry.date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
+        const stageLabel = stage ? `etapa ${stage.day}` : null;
 
         return (
           <div key={entry.id} style={{
@@ -369,10 +395,15 @@ function OtherSharedJournal({ entries, stages }) {
             padding: '12px 14px',
             marginBottom: 8,
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <span style={{ fontSize: 10, color: '#B4B2A9', letterSpacing: 0.5 }}>
-                {date} · dia {stage?.day ?? '?'}
+            <div style={{ marginBottom: 6 }}>
+              <span style={{ fontSize: 11, color: '#D3D1C7', letterSpacing: 0.3 }}>
+                {date}
               </span>
+              {stageLabel && (
+                <span style={{ fontSize: 10, color: '#5F5E5A', marginLeft: 8 }}>
+                  {stageLabel}
+                </span>
+              )}
             </div>
             <p style={{ fontSize: 11, color: '#888780', fontStyle: 'italic', margin: '0 0 4px' }}>
               {entry.prompt}
