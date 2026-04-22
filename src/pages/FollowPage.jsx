@@ -107,8 +107,37 @@ export default function FollowPage() {
   const remainingKm = totalKm - walkedKm;
   const lastStamped = [...data.stages].reverse().find(s => s.arrivedAt);
 
+  // Gather shared entries newest first — used both for the dominant display and the list
+  const sharedEntries = data.journal
+    .filter(e => e.shared)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const latestShared = sharedEntries[0] ?? null;
+
+  // Decide what signal dominates the top of the page.
+  // If weather is set for the current stage, weather wins.
+  // Otherwise, if there's a shared entry, that entry becomes the heart of the page.
+  // Otherwise, we show the quiet "sem notícias ainda" state.
   const weather = current.weatherStatus;
-  const lastUpdate = current.arrivedAt || current.startedAt;
+  const dominantSignal = weather
+    ? 'weather'
+    : latestShared
+      ? 'entry'
+      : 'silent';
+
+  // Pick the right timestamp for the "há X" line under the dominant signal
+  const dominantTimestamp =
+    dominantSignal === 'weather'
+      ? (current.arrivedAt || current.startedAt)
+      : dominantSignal === 'entry'
+        ? latestShared.date
+        : null;
+
+  // When the dominant signal is a journal entry, we don't want to duplicate it
+  // in the PARTILHAS list below. So skip the first entry if it's the dominant one.
+  const otherSharedEntries = dominantSignal === 'entry'
+    ? sharedEntries.slice(1)
+    : sharedEntries;
 
   const stageLabel = current.startedAt && !current.arrivedAt
     ? `${current.from} → ${current.to}`
@@ -143,30 +172,113 @@ export default function FollowPage() {
         </div>
       </div>
 
-      <div style={{
-        textAlign: 'center',
-        padding: '24px 0',
-        borderTop: '0.5px solid #444441',
-        borderBottom: '0.5px solid #444441',
-        marginBottom: 20,
-      }}>
-        <p style={{ fontSize: 56, lineHeight: 1, margin: 0 }}>
-          {weather ? WEATHER_ICONS[weather] : '—'}
-        </p>
-        <p style={{
-          fontSize: 14,
-          color: '#D3D1C7',
-          margin: '10px 0 0',
-          fontStyle: 'italic',
+      {/* Dominant signal area — weather, latest entry, or silent */}
+      {dominantSignal === 'weather' && (
+        <div style={{
+          textAlign: 'center',
+          padding: '24px 0',
+          borderTop: '0.5px solid #444441',
+          borderBottom: '0.5px solid #444441',
+          marginBottom: 20,
         }}>
-          {weather ? WEATHER_TEXT[weather] : 'sem notícias ainda'}
-        </p>
-        {lastUpdate && (
-          <p style={{ fontSize: 11, color: '#888780', margin: '6px 0 0' }}>
-            {timeAgo(lastUpdate)}
+          <p style={{ fontSize: 56, lineHeight: 1, margin: 0 }}>
+            {WEATHER_ICONS[weather]}
           </p>
-        )}
-      </div>
+          <p style={{
+            fontSize: 14,
+            color: '#D3D1C7',
+            margin: '10px 0 0',
+            fontStyle: 'italic',
+          }}>
+            {WEATHER_TEXT[weather]}
+          </p>
+          {dominantTimestamp && (
+            <p style={{ fontSize: 11, color: '#888780', margin: '6px 0 0' }}>
+              {timeAgo(dominantTimestamp)}
+            </p>
+          )}
+        </div>
+      )}
+
+      {dominantSignal === 'entry' && (
+        <div style={{
+          padding: '16px 16px 18px',
+          borderTop: '0.5px solid #444441',
+          borderBottom: '0.5px solid #444441',
+          marginBottom: 20,
+          textAlign: 'center',
+        }}>
+          <p style={{
+            fontSize: 10,
+            color: '#B4B2A9',
+            letterSpacing: 0.5,
+            margin: '0 0 10px',
+            textTransform: 'uppercase',
+          }}>
+            Último momento partilhado
+          </p>
+          {latestShared.photoUrl && (
+            <img
+              src={latestShared.photoUrl}
+              alt="último momento partilhado"
+              style={{
+                width: '100%',
+                maxHeight: 280,
+                objectFit: 'cover',
+                borderRadius: 10,
+                display: 'block',
+                marginBottom: latestShared.text ? 10 : 0,
+              }}
+            />
+          )}
+          {latestShared.text && (
+            <p style={{
+              fontSize: 14,
+              color: '#F1EFE8',
+              margin: 0,
+              lineHeight: 1.5,
+              whiteSpace: 'pre-wrap',
+              textAlign: 'left',
+            }}>
+              {latestShared.text}
+            </p>
+          )}
+          {latestShared.voiceUrl && (
+            <audio
+              controls
+              src={latestShared.voiceUrl}
+              style={{
+                width: '100%',
+                height: 36,
+                marginTop: (latestShared.text || latestShared.photoUrl) ? 10 : 0,
+              }}
+            />
+          )}
+          <p style={{ fontSize: 11, color: '#888780', margin: '10px 0 0' }}>
+            {timeAgo(latestShared.date)}
+          </p>
+        </div>
+      )}
+
+      {dominantSignal === 'silent' && (
+        <div style={{
+          textAlign: 'center',
+          padding: '24px 0',
+          borderTop: '0.5px solid #444441',
+          borderBottom: '0.5px solid #444441',
+          marginBottom: 20,
+        }}>
+          <p style={{ fontSize: 56, lineHeight: 1, margin: 0 }}>—</p>
+          <p style={{
+            fontSize: 14,
+            color: '#D3D1C7',
+            margin: '10px 0 0',
+            fontStyle: 'italic',
+          }}>
+            sem notícias ainda
+          </p>
+        </div>
+      )}
 
       <div style={{
         display: 'flex',
@@ -213,7 +325,7 @@ export default function FollowPage() {
         </div>
       )}
 
-      <SharedJournal data={data} />
+      <OtherSharedJournal entries={otherSharedEntries} stages={data.stages} />
 
       <p style={{
         fontSize: 10,
@@ -231,12 +343,8 @@ export default function FollowPage() {
   );
 }
 
-function SharedJournal({ data }) {
-  const shared = data.journal
-    .filter(e => e.shared)
-    .sort((a, b) => b.date.localeCompare(a.date));
-
-  if (shared.length === 0) return null;
+function OtherSharedJournal({ entries, stages }) {
+  if (entries.length === 0) return null;
 
   return (
     <div style={{ marginTop: 20 }}>
@@ -248,10 +356,10 @@ function SharedJournal({ data }) {
         textTransform: 'uppercase',
         textAlign: 'center',
       }}>
-        PARTILHAS — {shared.length}
+        PARTILHAS — {entries.length}
       </p>
-      {shared.map(entry => {
-        const stage = data.stages.find(s => s.id === entry.stageId);
+      {entries.map(entry => {
+        const stage = stages.find(s => s.id === entry.stageId);
         const date = new Date(entry.date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
 
         return (
@@ -296,7 +404,6 @@ function SharedJournal({ data }) {
                   width: '100%',
                   height: 36,
                   marginTop: (entry.text || entry.photoUrl) ? 8 : 0,
-                  // Safari dark mode workaround — the audio controls look pale on dark; this is acceptable
                 }}
               />
             )}
